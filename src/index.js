@@ -34,7 +34,7 @@ const AppLayout = () => (
 
 const router = createBrowserRouter([
   {
-    path: "/Login",
+    path: "/",
     element: <SignIn />,
   },
   {

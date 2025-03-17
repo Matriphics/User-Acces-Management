@@ -15,10 +15,13 @@ import Stack from '@mui/material/Stack';
 import MuiCard from '@mui/material/Card';
 import { styled } from '@mui/material/styles';
 import ForgotPassword from './ForgotPassword';
-import { GoogleIcon, FacebookIcon } from './CustomIcons';
+import { GoogleIcon, FacebookIcon, SitemarkIcon } from './CustomIcons';
 import AppTheme from './shared-theme/AppTheme';
 import ColorModeSelect from './shared-theme/ColorModeSelect';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
+
+import axios from 'axios';
+
 
 const Card = styled(MuiCard)(({ theme }) => ({
   display: 'flex',
@@ -65,7 +68,7 @@ const SignInContainer = styled(Stack)(({ theme }) => ({
 export default function SignIn(props) {
   const navigate = useNavigate();
   const [email, setEmail] = React.useState('');
-  const [password, setPassword] = React.useState('');
+  const [password, setPassword] = React.useState(''); 
   const [emailError, setEmailError] = React.useState(false);
   const [emailErrorMessage, setEmailErrorMessage] = React.useState('');
   const [passwordError, setPasswordError] = React.useState(false);
@@ -80,37 +83,61 @@ export default function SignIn(props) {
     setOpen(false);
   };
 
-  const handleSubmit = (event) => {
+  
+  const handleSubmit = async (event) => {
     event.preventDefault();
 
-    // Validate inputs before proceeding
+    // Validate inputs before sending the request
     if (!validateInputs()) {
       return;
     }
 
-    // Custom credentials
-    const customEmail = 'user@example.com';
-    const customPassword = 'mypassword';
+    try {
+      const response = await axios.post('http://127.0.0.1:8082/auth/login', {
+        email_id: email,
+        password,
+      });
 
-    if (email === customEmail && password === customPassword) {
-      // Simulate saving a token and navigating to home page
-      localStorage.setItem('token', 'dummy-token');
-      console.log('Login successful!');
-      alert('Login successful!');
-      navigate('/home'); // Redirect to home page
-    } else {
-      setPasswordError(true);
-      setPasswordErrorMessage('Invalid email or password.');
+      if (response.status === 200) {
+        // Save the token to localStorage
+        const token = response.data.access_token;
+        if (token) {
+          localStorage.setItem('token', token); // Save token to localStorage
+          console.log('Token saved:', token);
+          alert('Login successful!');
+          navigate('/home'); // Redirect to home page
+        } else {
+          alert('No access token received from the server.');
+        }
+      } else {
+        setPasswordError(true);
+        setPasswordErrorMessage('Invalid email or password.');
+      }
+    } catch (error) {
+      // Handle errors
+      if (error.response) {
+        console.error('Server Error:', error.response.data);
+        setPasswordError(true);
+        setPasswordErrorMessage(error.response.data.message || 'Invalid email or password.');
+      } else if (error.request) {
+        console.error('Network Error:', error.request);
+        setPasswordError(true);
+        setPasswordErrorMessage('Network error. Please try again.');
+      } else {
+        console.error('Error:', error.message);
+        setPasswordError(true);
+        setPasswordErrorMessage('An error occurred. Please try again.');
+      }
     }
   };
-
+  
   const validateInputs = () => {
-    const emailInput = document.getElementById('email');
-    const passwordInput = document.getElementById('password');
+    const email = document.getElementById('email');
+    const password = document.getElementById('password');
 
     let isValid = true;
 
-    if (!emailInput.value || !/\S+@\S+\.\S+/.test(emailInput.value)) {
+    if (!email.value || !/\S+@\S+\.\S+/.test(email.value)) {
       setEmailError(true);
       setEmailErrorMessage('Please enter a valid email address.');
       isValid = false;
@@ -119,7 +146,7 @@ export default function SignIn(props) {
       setEmailErrorMessage('');
     }
 
-    if (!passwordInput.value || passwordInput.value.length < 6) {
+    if (!password.value || password.value.length < 6) {
       setPasswordError(true);
       setPasswordErrorMessage('Password must be at least 6 characters long.');
       isValid = false;
@@ -131,12 +158,16 @@ export default function SignIn(props) {
     return isValid;
   };
 
+
+ 
+
   return (
     <AppTheme {...props}>
       <CssBaseline enableColorScheme />
       <SignInContainer direction="column" justifyContent="space-between">
         <ColorModeSelect sx={{ position: 'fixed', top: '1rem', right: '1rem' }} />
         <Card variant="outlined">
+          
           <Typography
             component="h1"
             variant="h4"
@@ -196,6 +227,7 @@ export default function SignIn(props) {
                 type="password"
                 id="password"
                 autoComplete="current-password"
+                autoFocus
                 required
                 fullWidth
                 variant="outlined"
@@ -209,53 +241,59 @@ export default function SignIn(props) {
               label="Remember me"
             />
             <ForgotPassword open={open} handleClose={handleClose} />
-            <Button type="submit" fullWidth variant="contained">
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              onClick={validateInputs}
+            >
               Sign in
             </Button>
             <Typography sx={{ textAlign: 'center' }}>
-              Don't have an account?{' '}
-              <Tooltip
-                title="Click here to register yourself for accessing the assets!"
-                placement="top"
-                arrow
-                enterDelay={300}
-                leaveDelay={200}
-                componentsProps={{
-                  tooltip: {
-                    sx: {
-                      fontSize: '1rem',
-                      padding: '12px 16px',
-                      maxWidth: '250px',
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      borderRadius: '4px',
-                    },
-                  },
-                }}
-              >
-                <Button
-                  component="a"
-                  href="/signup"
-                  variant="text"
-                  size="small"
-                  sx={{
-                    alignSelf: 'center',
-                    textTransform: 'none',
-                    padding: 0,
-                    minWidth: 'auto',
-                    fontWeight: 'bold',
-                    color: 'primary.main',
-                    '&:hover': {
-                      backgroundColor: 'transparent',
-                      textDecoration: 'underline',
-                    },
-                  }}
-                  aria-label="Sign up"
-                >
-                  Sign up
-                </Button>
-              </Tooltip>
-            </Typography>
+      Don't have an account?{' '}
+      <Tooltip
+        title="Click here to register yourself for accessing the assets!"
+        placement="top"
+        arrow
+        enterDelay={300}
+        leaveDelay={200}
+        componentsProps={{
+          tooltip: {
+            sx: {
+              fontSize: '1rem',
+              padding: '12px 16px',
+              maxWidth: '250px',
+              backgroundColor: 'primary.main',
+              color: 'white',
+              borderRadius: '4px',
+            },
+          },
+        }}
+      >
+        <Button
+          component="a"
+          href="/signup"
+          variant="text"
+          size="small"
+          sx={{
+            alignSelf: 'center',
+            textTransform: 'none',
+            padding: 0,
+            minWidth: 'auto',
+            fontWeight: 'bold',
+            color: 'primary.main',
+            '&:hover': {
+              backgroundColor: 'transparent',
+              textDecoration: 'underline',
+            },
+          }}
+          aria-label="Sign up"
+        >
+          Sign up
+        </Button>
+      </Tooltip>
+    </Typography>
+
           </Box>
           <Divider>or</Divider>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
